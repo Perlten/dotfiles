@@ -5,8 +5,10 @@ from libqtile.config import Click, Drag, Group, Key, Match, Screen
 from libqtile.core.manager import Qtile
 from libqtile.lazy import lazy
 from libqtile.utils import guess_terminal
-from libqtile.command import lazy as lazy_command
 from libqtile.log_utils import logger
+
+import os
+import subprocess
 
 
 class PrevFocus(object):
@@ -39,6 +41,8 @@ class PrevFocus(object):
         if prev and group.name == prev.group.name:
             group.focus(prev, False)
 
+def switch_to_last_group(qtile: Qtile):
+    qtile.current_screen.set_group(qtile.current_screen.previous_group)
 
 def move_window(qtile: Qtile, *args):
     side = args[0]
@@ -60,8 +64,8 @@ def move_window(qtile: Qtile, *args):
 
 
 def move_focus_to_neighbor(qtile: Qtile, *args):
-    logger.warning("TEST")
     side = args[0]
+    
     group = qtile.current_group
     windowList: List = group.windows
 
@@ -95,8 +99,8 @@ terminal = guess_terminal()
 
 keys = [
     # Switch between windows
-    Key([mod], "Left", lazy.layout.left(), desc="Move focus to left"),
-    Key([mod], "Right", lazy.layout.right(), desc="Move focus to right"),
+    #Key([mod], "Left", lazy.layout.left(), desc="Move focus to left"),
+    #Key([mod], "Right", lazy.layout.right(), desc="Move focus to right"),
     Key([mod], "Down", lazy.layout.down(), desc="Move focus down"),
     Key([mod], "Up", lazy.layout.up(), desc="Move focus up"),
 
@@ -113,10 +117,8 @@ keys = [
     Key(["mod1"], "8", lazy.function(move_focus_to_index, 7)),
     Key(["mod1"], "9", lazy.function(move_focus_to_index, 8)),
 
+    Key([mod], "d", lazy.spawn("dmenu_run -h 34")),
 
-
-    # Move windows between left/right columns or move up/down in current stack.
-    # Moving out of range in Columns layout will create new column.
     Key([mod, "shift"], "Left", lazy.layout.shuffle_left(),
         desc="Move window to the left"),
     Key([mod, "shift"], "Right", lazy.layout.shuffle_right(),
@@ -125,8 +127,6 @@ keys = [
         desc="Move window down"),
     Key([mod, "shift"], "Up", lazy.layout.shuffle_up(), desc="Move window up"),
 
-    # Grow windows. If current window is on the edge of screen and direction
-    # will be to screen edge - window would shrink.
     Key([mod, "control"], "Left", lazy.layout.grow_left(),
         desc="Grow window to the left"),
     Key([mod, "control"], "Right", lazy.layout.grow_right(),
@@ -134,6 +134,7 @@ keys = [
     Key([mod, "control"], "Down", lazy.layout.grow_down(),
         desc="Grow window down"),
     Key([mod, "control"], "Up", lazy.layout.grow_up(), desc="Grow window up"),
+    
     Key([mod], "n", lazy.layout.normalize(), desc="Reset all window sizes"),
 
     Key([mod], "Return", lazy.spawn(terminal), desc="Launch terminal"),
@@ -142,45 +143,30 @@ keys = [
     Key([mod], "w", lazy.next_layout(), desc="Toggle between layouts"),
     Key([mod, "shift"], "q", lazy.window.kill(), desc="Kill focused window"),
 
-    Key([mod, "control"], "r", lazy.reload_config(), desc="Reload the config"),
+    Key([mod], "k", lazy.reload_config(), desc="Reload the config"),
     Key(["mod1"], "Tab", lazy.function(PrevFocus())),
+    Key([mod], "Tab", lazy.function(switch_to_last_group)),
 
     Key(["mod1", "shift"], "Right", lazy.function(move_window, "right")),
     Key(["mod1", "shift"], "Left", lazy.function(move_window, "left")),
 
+    Key([mod], "Escape", lazy.spawn("powerDown")),
 ]
 
 groups = [Group(i) for i in "123456789"]
 
 for i in groups:
     keys.extend([
-        # mod1 + letter of group = switch to group
         Key([mod], i.name, lazy.group[i.name].toscreen(),
             desc="Switch to group {}".format(i.name)),
 
-        # mod1 + shift + letter of group = switch to & move focused window to group
         Key([mod, "shift"], i.name, lazy.window.togroup(i.name, switch_group=True),
             desc="Switch to & move focused window to group {}".format(i.name)),
-        # Or, use below if you prefer not to switch to that group.
-        # # mod1 + shift + letter of group = move focused window to group
-        # Key([mod, "shift"], i.name, lazy.window.togroup(i.name),
-        #     desc="move focused window to group {}".format(i.name)),
     ])
 
 layouts = [
     layout.Max(),
-    layout.Columns(border_focus_stack=['#d75f5f', '#8f3d3d'], border_width=4),
-    # layout.Tile(),
-    # Try more layouts by unleashing below layouts.
-    # layout.Stack(num_stacks=2),
-    # layout.Bsp(),
-    # layout.Matrix(),
-    # layout.MonadTall(),
-    # layout.MonadWide(),
-    # layout.RatioTile(),
-    # layout.TreeTab(),
-    # layout.VerticalTile(),
-    # layout.Zoomy(),
+    layout.Columns(border_focus_stack=['#d75f5f', '#8f3d3d'], border_width=4, margin=6),
 ]
 
 widget_defaults = dict(
@@ -196,7 +182,8 @@ screens = [
         top=bar.Bar([
             widget.TaskList(
                     highlight_method="block",
-                    border="#243e80"
+                    border="#243e80",
+                    max_title_width=400
                     ),
             widget.Spacer(),
             widget.WidgetBox(widgets=[
@@ -215,6 +202,8 @@ screens = [
                 text_open="[>]  "
 
             ),
+            widget.Sep(),
+            widget.Net(),
             widget.Sep(),
             widget.Wttr(location={"CPH": "CPH"}, format="CPH:  %t  %c  %m  %p")
         ],
@@ -250,8 +239,6 @@ screens = [
                 widget.Sep(),
                 widget.TextBox(text="Volume:"),
                 widget.Volume(),
-                widget.Sep(),
-                widget.Backlight(),
                 widget.Sep(),
                 widget.Clock(format='%a %d-%m-%Y - %H:%M:%S',
                              update_interval=5),
@@ -295,6 +282,12 @@ reconfigure_screens = True
 # If things like steam games want to auto-minimize themselves when losing
 # focus, should we respect this or not?
 auto_minimize = True
+
+@hook.subscribe.startup_once
+def start_once():
+    auto = os.path.expanduser('~/.config/qtile/autostart.sh')
+    subprocess.Popen([auto])
+
 
 # XXX: Gasp! We're lying here. In fact, nobody really uses or cares about this
 # string besides java UI toolkits; you can see several discussions on the
