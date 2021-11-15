@@ -8,6 +8,7 @@ from libqtile.utils import guess_terminal
 from libqtile.command import lazy as lazy_command
 from libqtile.log_utils import logger
 
+
 class PrevFocus(object):
     """Store last focus per group and go back when called"""
 
@@ -37,10 +38,9 @@ class PrevFocus(object):
         prev = group_focus["prev"]
         if prev and group.name == prev.group.name:
             group.focus(prev, False)
-       
 
 
-def move_window(qtile : Qtile, *args):
+def move_window(qtile: Qtile, *args):
     side = args[0]
 
     group = qtile.current_group
@@ -56,10 +56,11 @@ def move_window(qtile : Qtile, *args):
     windowList[windowIndex + offset] = windowList[windowIndex]
     windowList[windowIndex] = temp
 
-    get_bar(qtile.current_screen).draw()
+    get_bar(qtile.current_screen, "top").draw()
 
 
 def move_focus_to_neighbor(qtile: Qtile, *args):
+    logger.warning("TEST")
     side = args[0]
     group = qtile.current_group
     windowList: List = group.windows
@@ -71,7 +72,8 @@ def move_focus_to_neighbor(qtile: Qtile, *args):
 
     group.focus(windowList[newWindowIndex])
 
-def move_focus_to_index(qtile:Qtile, *args):
+
+def move_focus_to_index(qtile: Qtile, *args):
     index = args[0]
     group = qtile.current_group
     windowList: List = group.windows
@@ -79,11 +81,14 @@ def move_focus_to_index(qtile:Qtile, *args):
     if len(windowList) > index:
         group.focus(windowList[index])
 
-def get_bar(screen, position = None) -> bar.Bar:
-    if not position: position = "bottom"
-    bar = getattr(screen, "bottom")
+
+def get_bar(screen, position=None) -> bar.Bar:
+    if not position:
+        position = "bottom"
+    bar = getattr(screen, position)
     return bar
-        
+
+
 mod = "mod4"
 
 terminal = guess_terminal()
@@ -94,7 +99,7 @@ keys = [
     Key([mod], "Right", lazy.layout.right(), desc="Move focus to right"),
     Key([mod], "Down", lazy.layout.down(), desc="Move focus down"),
     Key([mod], "Up", lazy.layout.up(), desc="Move focus up"),
-    
+
     Key([mod], "Right", lazy.function(move_focus_to_neighbor, "right")),
     Key([mod], "Left",  lazy.function(move_focus_to_neighbor, "left")),
 
@@ -181,29 +186,81 @@ layouts = [
 widget_defaults = dict(
     font='sans',
     fontsize=16,
-    padding=3,
+    padding=6,
 )
 
 extension_defaults = widget_defaults.copy()
 
 screens = [
     Screen(
+        top=bar.Bar([
+            widget.TaskList(
+                    highlight_method="block",
+                    border="#243e80"
+                    ),
+            widget.Spacer(),
+            widget.WidgetBox(widgets=[
+                widget.Sep(),
+                widget.TextBox(text="Network"),
+                widget.NetGraph(),
+                widget.Spacer(length=10),
+                widget.TextBox(text="CPU"),
+                widget.CPUGraph(),
+                widget.Spacer(length=10),
+                widget.TextBox(text="Memory"),
+                widget.Memory(),
+
+            ],
+                text_closed="Sys info [>]  ",
+                text_open="[>]  "
+
+            ),
+            widget.Sep(),
+            widget.Wttr(location={"CPH": "CPH"}, format="CPH:  %t  %c  %m  %p")
+        ],
+            34,
+            background="#1f1d1d"
+        ),
         bottom=bar.Bar(
             [
                 widget.Sep(),
                 widget.GroupBox(),
                 widget.Sep(),
-                widget.CurrentLayout(),
+                widget.CurrentLayoutIcon(),
                 widget.Sep(),
-                widget.TaskList(
-                    highlight_method="block",
-                    max_title_width=100,
+                widget.Notify(
+                    default_timeout=10,
+                    parse_text=lambda e: "Notification -> " + e,
+                    foreground="ff0000",
                 ),
-                widget.Clock(format='%Y-%m-%d %a %I:%M %p'),
+                widget.Prompt(),
+                widget.Spacer(),
+                widget.CheckUpdates(
+                    distro="Ubuntu",
+                    colour_no_updates="00ff00",
+                    execute="sudo apt update",
+                    no_update_string="0 Updates",
+                    custom_command="apt list --upgradable",
+                    custom_command_modify=lambda e: e - 1,
+                    mouse_callbacks={"Button1": lazy.spawn("update-manager")}
+                ),
+                widget.Sep(),
+                widget.Battery(),
+                widget.BatteryIcon(),
+                widget.Sep(),
+                widget.TextBox(text="Volume:"),
+                widget.Volume(),
+                widget.Sep(),
+                widget.Backlight(),
+                widget.Sep(),
+                widget.Clock(format='%a %d-%m-%Y - %H:%M:%S',
+                             update_interval=5),
             ],
             34,
+            background="#1f1d1d"
         ),
-    )
+    ),
+
 ]
 
 # Drag floating layouts.
