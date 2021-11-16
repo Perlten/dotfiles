@@ -11,6 +11,7 @@ import os
 import subprocess
 
 
+
 class PrevFocus(object):
     """Store last focus per group and go back when called"""
 
@@ -92,15 +93,29 @@ def get_bar(screen, position=None) -> bar.Bar:
     bar = getattr(screen, position)
     return bar
 
-
 mod = "mod4"
 
 terminal = guess_terminal()
 
+
+def test(qtile: Qtile):
+    logger.warning("HOME TEST")
+    auto = os.path.expanduser('~/.config/qtile/test.sh')
+    subprocess.Popen([auto])
+
 keys = [
-    # Switch between windows
-    #Key([mod], "Left", lazy.layout.left(), desc="Move focus to left"),
-    #Key([mod], "Right", lazy.layout.right(), desc="Move focus to right"),
+
+    Key(["mod1", "control"], "h", lazy.function(test)),
+
+    
+
+    Key([], "XF86AudioRaiseVolume",
+        lazy.spawn("amixer sset Master 5%+")),
+    Key([], "XF86AudioLowerVolume",
+        lazy.spawn("amixer sset Master 5%-")),
+    Key([], "XF86AudioMute",
+        lazy.spawn("amixer sset Master toggle")),
+
     Key([mod], "Down", lazy.layout.down(), desc="Move focus down"),
     Key([mod], "Up", lazy.layout.up(), desc="Move focus up"),
 
@@ -235,13 +250,10 @@ screens = [
                 ),
                 widget.Sep(),
                 widget.Battery(),
-                widget.BatteryIcon(),
-                widget.Sep(),
-                widget.TextBox(text="Volume:"),
-                widget.Volume(),
                 widget.Sep(),
                 widget.Clock(format='%a %d-%m-%Y - %H:%M:%S',
                              update_interval=5),
+                widget.Systray(),
             ],
             34,
             background="#1f1d1d"
