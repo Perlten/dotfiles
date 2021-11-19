@@ -7,6 +7,8 @@ from libqtile.lazy import lazy
 from libqtile.utils import guess_terminal
 from libqtile.log_utils import logger
 
+from pymouse import PyMouse
+
 import os
 import subprocess
 
@@ -39,7 +41,7 @@ def create_screen_bar(visible_groups):
             widget.Sep(),
             widget.Wttr(location={"Copenhagen": "Copenhagen"}, format="CPH:  %t  %c  %m  %p")
         ],
-            34, # 44
+            34,  # 44
             background="#1f1d1d"
         ),
         bottom=bar.Bar(
@@ -76,11 +78,10 @@ def create_screen_bar(visible_groups):
                 ),
                 widget.Spacer(length=12)
             ],
-            34, # 44
+            34,  # 44
             background="#1f1d1d"
         ),
     )
-
 
 
 class PrevFocus(object):
@@ -116,6 +117,13 @@ class PrevFocus(object):
 
 def switch_to_last_group(qtile: Qtile):
     qtile.current_screen.set_group(qtile.current_screen.previous_group)
+
+
+def center_mouse_on_current_screen(c_screen: Screen):
+    m = PyMouse()
+    x = c_screen.x + (c_screen.width // 2)
+    y = c_screen.y + (c_screen.height // 2)
+    m.move(x, y)
 
 
 def move_window(qtile: Qtile, *args):
@@ -169,8 +177,8 @@ def get_bar(screen, position=None) -> bar.Bar:
 
 
 group_screen_index = [
-    ["1","2","3"],
-    ["4", "5", "6", "7", "8", "9"],
+    ["1", "2"],
+    ["3", "4", "5", "6", "7", "8", "9"],
     [],
     [],
     [],
@@ -180,18 +188,33 @@ group_screen_index = [
     [],
 ]
 
+
 def switch_group_and_keep_screen_pos(group: Group):
     def _inner(qtile: Qtile):
         name = group.name
 
         if len(qtile.screens) == 1:
+            pre_screen = qtile.current_screen
             qtile.groups_map[name].cmd_toscreen()
+        
+            if qtile.current_screen != pre_screen:
+                center_mouse_on_current_screen(qtile.current_screen)
+
+
+            group_screen_index[0].extend(group_screen_index[1])
+            group_screen_index[1] = []
             return
 
         for index, scrren_index_groups in enumerate(group_screen_index):
             if name in scrren_index_groups:
+                pre_screen = qtile.current_screen
                 qtile.focus_screen(index)
                 qtile.groups_map[name].cmd_toscreen()
+                
+                if qtile.current_screen != pre_screen:
+                    center_mouse_on_current_screen(qtile.current_screen)
+                
+                break
 
     return _inner
 
@@ -203,11 +226,17 @@ def switch_group_screen(qtile: Qtile):
         if name in scrren_index_groups:
             name_index = scrren_index_groups.index(name)
             scrren_index_groups.pop(name_index)
-            
+            logger.warning(len(qtile.screens))
             new_location = (index + 1) % len(qtile.screens)
             group_screen_index[new_location].append(name)
+
             break
-    
+
+
+def extend_bar(qtile: Qtile):
+    screens.append(create_screen_bar(len(screens)))
+    logger.warning(len(screens))
+    qtile.cmd_reconfigure_screens()
 
 # ------------------------------------------------------
 
@@ -219,6 +248,7 @@ terminal = "terminator -x bash"
 
 keys = [
 
+    Key([mod], "k", lazy.function(extend_bar)),
     Key([mod], "b", lazy.function(switch_group_screen)),
 
     Key([], "XF86AudioRaiseVolume",
@@ -302,16 +332,26 @@ layouts = [
 
 widget_defaults = dict(
     font='sans',
-    fontsize=18, # 26
+    fontsize=18,  # 26
     padding=6,
 )
 
 extension_defaults = widget_defaults.copy()
 
+
 screens = [
     create_screen_bar(group_screen_index[0]),
-    create_screen_bar(group_screen_index[1])
+    create_screen_bar(group_screen_index[1]),
+    create_screen_bar(group_screen_index[2]),
+    create_screen_bar(group_screen_index[3]),
+    create_screen_bar(group_screen_index[4]),
+    create_screen_bar(group_screen_index[5]),
+    create_screen_bar(group_screen_index[6]),
+    create_screen_bar(group_screen_index[7]),
+    create_screen_bar(group_screen_index[8]),
 ]
+
+
 
 # Drag floating layouts.
 mouse = [
