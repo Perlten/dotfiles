@@ -95,8 +95,8 @@ def get_bar(screen, position=None) -> bar.Bar:
 
 mod = "mod4"
 
-terminal = guess_terminal()
-
+#terminal = guess_terminal()
+terminal = "terminator -x bash"
 
 def test(qtile: Qtile):
     logger.warning("HOME TEST")
@@ -132,7 +132,7 @@ keys = [
     Key(["mod1"], "8", lazy.function(move_focus_to_index, 7)),
     Key(["mod1"], "9", lazy.function(move_focus_to_index, 8)),
 
-    Key([mod], "d", lazy.spawn("dmenu_run -h 34")),
+    Key([mod], "d", lazy.spawn("dmenu_run -l 10")),
 
     Key([mod, "shift"], "Left", lazy.layout.shuffle_left(),
         desc="Move window to the left"),
@@ -158,7 +158,7 @@ keys = [
     Key([mod], "w", lazy.next_layout(), desc="Toggle between layouts"),
     Key([mod, "shift"], "q", lazy.window.kill(), desc="Kill focused window"),
 
-    Key([mod], "k", lazy.reload_config(), desc="Reload the config"),
+    Key([mod, "control"], "r", lazy.restart(), desc="Reload the config"),
     Key(["mod1"], "Tab", lazy.function(PrevFocus())),
     Key([mod], "Tab", lazy.function(switch_to_last_group)),
 
@@ -186,7 +186,7 @@ layouts = [
 
 widget_defaults = dict(
     font='sans',
-    fontsize=16,
+    fontsize=26,
     padding=6,
 )
 
@@ -203,11 +203,8 @@ screens = [
             widget.Spacer(),
             widget.WidgetBox(widgets=[
                 widget.Sep(),
-                widget.TextBox(text="Network"),
-                widget.NetGraph(),
                 widget.Spacer(length=10),
-                widget.TextBox(text="CPU"),
-                widget.CPUGraph(),
+                widget.CPU(),
                 widget.Spacer(length=10),
                 widget.TextBox(text="Memory"),
                 widget.Memory(),
@@ -220,9 +217,9 @@ screens = [
             widget.Sep(),
             widget.Net(),
             widget.Sep(),
-            widget.Wttr(location={"CPH": "CPH"}, format="CPH:  %t  %c  %m  %p")
+            widget.Wttr(location={"Copenhagen": "Copenhagen"}, format="CPH:  %t  %c  %m  %p")
         ],
-            34,
+            44,
             background="#1f1d1d"
         ),
         bottom=bar.Bar(
@@ -253,9 +250,81 @@ screens = [
                 widget.Sep(),
                 widget.Clock(format='%a %d-%m-%Y - %H:%M:%S',
                              update_interval=5),
-                widget.Systray(),
+		widget.Sep(),
+                widget.Systray(
+                    icon_size=30,
+                ),
+                widget.Spacer(length=12)
             ],
-            34,
+            44,
+            background="#1f1d1d"
+        ),
+    ),
+
+    Screen(
+        top=bar.Bar([
+            widget.TaskList(
+                    highlight_method="block",
+                    border="#243e80",
+                    max_title_width=400
+                    ),
+            widget.Spacer(),
+            widget.WidgetBox(widgets=[
+                widget.Sep(),
+                widget.Spacer(length=10),
+                widget.CPU(),
+                widget.Spacer(length=10),
+                widget.TextBox(text="Memory"),
+                widget.Memory(),
+
+            ],
+                text_closed="Sys info [>]  ",
+                text_open="[>]  "
+
+            ),
+            widget.Sep(),
+            widget.Net(),
+            widget.Sep(),
+            widget.Wttr(location={"Copenhagen": "Copenhagen"}, format="CPH:  %t  %c  %m  %p")
+        ],
+            44,
+            background="#1f1d1d"
+        ),
+        bottom=bar.Bar(
+            [
+                widget.Sep(),
+                widget.GroupBox(),
+                widget.Sep(),
+                widget.CurrentLayoutIcon(),
+                widget.Sep(),
+                widget.Notify(
+                    default_timeout=10,
+                    parse_text=lambda e: "Notification -> " + e,
+                    foreground="ff0000",
+                ),
+                widget.Prompt(),
+                widget.Spacer(),
+                widget.CheckUpdates(
+                    distro="Ubuntu",
+                    colour_no_updates="00ff00",
+                    execute="sudo apt update",
+                    no_update_string="0 Updates",
+                    custom_command="apt list --upgradable",
+                    custom_command_modify=lambda e: e - 1,
+                    mouse_callbacks={"Button1": lazy.spawn("update-manager")}
+                ),
+                widget.Sep(),
+                widget.Battery(),
+                widget.Sep(),
+                widget.Clock(format='%a %d-%m-%Y - %H:%M:%S',
+                             update_interval=5),
+		widget.Sep(),
+                widget.Systray(
+                    icon_size=30,
+                ),
+                widget.Spacer(length=12)
+            ],
+            44,
             background="#1f1d1d"
         ),
     ),
