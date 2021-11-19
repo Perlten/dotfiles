@@ -12,6 +12,77 @@ import subprocess
 
 
 
+def create_screen_bar(visible_groups):
+    return Screen(
+        top=bar.Bar([
+            widget.TaskList(
+                    highlight_method="block",
+                    border="#243e80",
+                    max_title_width=400
+                    ),
+            widget.Spacer(),
+            widget.WidgetBox(widgets=[
+                widget.Sep(),
+                widget.Spacer(length=10),
+                widget.CPU(),
+                widget.Spacer(length=10),
+                widget.TextBox(text="Memory"),
+                widget.Memory(),
+
+            ],
+                text_closed="Sys info [>]  ",
+                text_open="[>]  "
+
+            ),
+            widget.Sep(),
+            widget.Net(),
+            widget.Sep(),
+            widget.Wttr(location={"Copenhagen": "Copenhagen"}, format="CPH:  %t  %c  %m  %p")
+        ],
+            34, # 44
+            background="#1f1d1d"
+        ),
+        bottom=bar.Bar(
+            [
+                widget.Sep(),
+                widget.GroupBox(visible_groups=visible_groups),
+                widget.Sep(),
+                widget.CurrentLayoutIcon(),
+                widget.Sep(),
+                widget.Notify(
+                    default_timeout=10,
+                    parse_text=lambda e: "Notification -> " + e,
+                    foreground="ff0000",
+                ),
+                widget.Prompt(),
+                widget.Spacer(),
+                widget.CheckUpdates(
+                    distro="Ubuntu",
+                    colour_no_updates="00ff00",
+                    execute="sudo apt update",
+                    no_update_string="0 Updates",
+                    custom_command="apt list --upgradable",
+                    custom_command_modify=lambda e: e - 1,
+                    mouse_callbacks={"Button1": lazy.spawn("update-manager")}
+                ),
+                widget.Sep(),
+                widget.Battery(),
+                widget.Sep(),
+                widget.Clock(format='%a %d-%m-%Y - %H:%M:%S',
+                             update_interval=5),
+                widget.Sep(),
+                widget.Systray(
+                    icon_size=30,
+                ),
+                widget.Spacer(length=12)
+            ],
+            34, # 44
+            background="#1f1d1d"
+        ),
+    )
+
+
+
 class PrevFocus(object):
     """Store last focus per group and go back when called"""
 
@@ -42,8 +113,10 @@ class PrevFocus(object):
         if prev and group.name == prev.group.name:
             group.focus(prev, False)
 
+
 def switch_to_last_group(qtile: Qtile):
     qtile.current_screen.set_group(qtile.current_screen.previous_group)
+
 
 def move_window(qtile: Qtile, *args):
     side = args[0]
@@ -66,7 +139,7 @@ def move_window(qtile: Qtile, *args):
 
 def move_focus_to_neighbor(qtile: Qtile, *args):
     side = args[0]
-    
+
     group = qtile.current_group
     windowList: List = group.windows
 
@@ -88,26 +161,65 @@ def move_focus_to_index(qtile: Qtile, *args):
 
 
 def get_bar(screen, position=None) -> bar.Bar:
+    d: Group = None
     if not position:
         position = "bottom"
     bar = getattr(screen, position)
     return bar
+
+
+group_screen_index = [
+    ["1","2","3"],
+    ["4", "5", "6", "7", "8", "9"],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+]
+
+def switch_group_and_keep_screen_pos(group: Group):
+    def _inner(qtile: Qtile):
+        name = group.name
+
+        if len(qtile.screens) == 1:
+            qtile.groups_map[name].cmd_toscreen()
+            return
+
+        for index, scrren_index_groups in enumerate(group_screen_index):
+            if name in scrren_index_groups:
+                qtile.focus_screen(index)
+                qtile.groups_map[name].cmd_toscreen()
+
+    return _inner
+
+
+def switch_group_screen(qtile: Qtile):
+    name = qtile.current_group.name
+
+    for index, scrren_index_groups in enumerate(group_screen_index):
+        if name in scrren_index_groups:
+            name_index = scrren_index_groups.index(name)
+            scrren_index_groups.pop(name_index)
+            
+            new_location = (index + 1) % len(qtile.screens)
+            group_screen_index[new_location].append(name)
+            break
+    
+
+# ------------------------------------------------------
+
 
 mod = "mod4"
 
 #terminal = guess_terminal()
 terminal = "terminator -x bash"
 
-def test(qtile: Qtile):
-    logger.warning("HOME TEST")
-    auto = os.path.expanduser('~/.config/qtile/test.sh')
-    subprocess.Popen([auto])
-
 keys = [
 
-    Key(["mod1", "control"], "h", lazy.function(test)),
-
-    
+    Key([mod], "b", lazy.function(switch_group_screen)),
 
     Key([], "XF86AudioRaiseVolume",
         lazy.spawn("amixer sset Master 5%+")),
@@ -149,7 +261,7 @@ keys = [
     Key([mod, "control"], "Down", lazy.layout.grow_down(),
         desc="Grow window down"),
     Key([mod, "control"], "Up", lazy.layout.grow_up(), desc="Grow window up"),
-    
+
     Key([mod], "n", lazy.layout.normalize(), desc="Reset all window sizes"),
 
     Key([mod], "Return", lazy.spawn(terminal), desc="Launch terminal"),
@@ -172,8 +284,12 @@ groups = [Group(i) for i in "123456789"]
 
 for i in groups:
     keys.extend([
-        Key([mod], i.name, lazy.group[i.name].toscreen(),
+        # Key([mod], i.name, lazy.group[i.name].toscreen(),
+        #    desc="Switch to group {}".format(i.name)),
+
+        Key([mod], i.name, lazy.function(switch_group_and_keep_screen_pos(i)),
             desc="Switch to group {}".format(i.name)),
+
 
         Key([mod, "shift"], i.name, lazy.window.togroup(i.name, switch_group=True),
             desc="Switch to & move focused window to group {}".format(i.name)),
@@ -186,149 +302,15 @@ layouts = [
 
 widget_defaults = dict(
     font='sans',
-    fontsize=26,
+    fontsize=18, # 26
     padding=6,
 )
 
 extension_defaults = widget_defaults.copy()
 
 screens = [
-    Screen(
-        top=bar.Bar([
-            widget.TaskList(
-                    highlight_method="block",
-                    border="#243e80",
-                    max_title_width=400
-                    ),
-            widget.Spacer(),
-            widget.WidgetBox(widgets=[
-                widget.Sep(),
-                widget.Spacer(length=10),
-                widget.CPU(),
-                widget.Spacer(length=10),
-                widget.TextBox(text="Memory"),
-                widget.Memory(),
-
-            ],
-                text_closed="Sys info [>]  ",
-                text_open="[>]  "
-
-            ),
-            widget.Sep(),
-            widget.Net(),
-            widget.Sep(),
-            widget.Wttr(location={"Copenhagen": "Copenhagen"}, format="CPH:  %t  %c  %m  %p")
-        ],
-            44,
-            background="#1f1d1d"
-        ),
-        bottom=bar.Bar(
-            [
-                widget.Sep(),
-                widget.GroupBox(),
-                widget.Sep(),
-                widget.CurrentLayoutIcon(),
-                widget.Sep(),
-                widget.Notify(
-                    default_timeout=10,
-                    parse_text=lambda e: "Notification -> " + e,
-                    foreground="ff0000",
-                ),
-                widget.Prompt(),
-                widget.Spacer(),
-                widget.CheckUpdates(
-                    distro="Ubuntu",
-                    colour_no_updates="00ff00",
-                    execute="sudo apt update",
-                    no_update_string="0 Updates",
-                    custom_command="apt list --upgradable",
-                    custom_command_modify=lambda e: e - 1,
-                    mouse_callbacks={"Button1": lazy.spawn("update-manager")}
-                ),
-                widget.Sep(),
-                widget.Battery(),
-                widget.Sep(),
-                widget.Clock(format='%a %d-%m-%Y - %H:%M:%S',
-                             update_interval=5),
-		widget.Sep(),
-                widget.Systray(
-                    icon_size=30,
-                ),
-                widget.Spacer(length=12)
-            ],
-            44,
-            background="#1f1d1d"
-        ),
-    ),
-
-    Screen(
-        top=bar.Bar([
-            widget.TaskList(
-                    highlight_method="block",
-                    border="#243e80",
-                    max_title_width=400
-                    ),
-            widget.Spacer(),
-            widget.WidgetBox(widgets=[
-                widget.Sep(),
-                widget.Spacer(length=10),
-                widget.CPU(),
-                widget.Spacer(length=10),
-                widget.TextBox(text="Memory"),
-                widget.Memory(),
-
-            ],
-                text_closed="Sys info [>]  ",
-                text_open="[>]  "
-
-            ),
-            widget.Sep(),
-            widget.Net(),
-            widget.Sep(),
-            widget.Wttr(location={"Copenhagen": "Copenhagen"}, format="CPH:  %t  %c  %m  %p")
-        ],
-            44,
-            background="#1f1d1d"
-        ),
-        bottom=bar.Bar(
-            [
-                widget.Sep(),
-                widget.GroupBox(),
-                widget.Sep(),
-                widget.CurrentLayoutIcon(),
-                widget.Sep(),
-                widget.Notify(
-                    default_timeout=10,
-                    parse_text=lambda e: "Notification -> " + e,
-                    foreground="ff0000",
-                ),
-                widget.Prompt(),
-                widget.Spacer(),
-                widget.CheckUpdates(
-                    distro="Ubuntu",
-                    colour_no_updates="00ff00",
-                    execute="sudo apt update",
-                    no_update_string="0 Updates",
-                    custom_command="apt list --upgradable",
-                    custom_command_modify=lambda e: e - 1,
-                    mouse_callbacks={"Button1": lazy.spawn("update-manager")}
-                ),
-                widget.Sep(),
-                widget.Battery(),
-                widget.Sep(),
-                widget.Clock(format='%a %d-%m-%Y - %H:%M:%S',
-                             update_interval=5),
-		widget.Sep(),
-                widget.Systray(
-                    icon_size=30,
-                ),
-                widget.Spacer(length=12)
-            ],
-            44,
-            background="#1f1d1d"
-        ),
-    ),
-
+    create_screen_bar(group_screen_index[0]),
+    create_screen_bar(group_screen_index[1])
 ]
 
 # Drag floating layouts.
@@ -363,6 +345,7 @@ reconfigure_screens = True
 # If things like steam games want to auto-minimize themselves when losing
 # focus, should we respect this or not?
 auto_minimize = True
+
 
 @hook.subscribe.startup_once
 def start_once():
