@@ -12,75 +12,67 @@ from pymouse import PyMouse
 import os
 import subprocess
 
+colors = {
+    "net": ["#1D7EC6", "#1D7EC6"],  # net
+    "wttr": ["#C6651D", "#C6651D"],  # wttr
+    
+    "cpu": ["#C6651D", "#C6651D"],  # cpu
+    "memory": ["#1D7EC6", "#1D7EC6"],  # memory
+    "df": ["#C61D7E", "#C61D7E"],  # DF
+    "battery": ["#7EC61D", "#7EC61D"],  # battery
+    "clock": ["#C61D29", "#C61D29"],  # clock
+}
 
+def create_screen_bar(visible_groups, show_systray=False):
+    bootom_bar = [
+        widget.Sep(),
+        widget.GroupBox(visible_groups=visible_groups),
+        widget.Sep(),
+        widget.CurrentLayoutIcon(),
+        widget.Sep(),
+        widget.Prompt(),
+        widget.Spacer(),
+        widget.Sep(),
+        widget.CPU(format='{freq_current}GHz {load_percent}%', foreground=colors["cpu"]),
+        widget.Sep(),
+        widget.Memory(format="{MemUsed: .0f}{mm}/{MemTotal: .0f}{mm}", foreground=colors["memory"]),
+        widget.Sep(),
+        widget.DF(visible_on_warn=False, format=" {f}/{s} GB", warn_space=50, foreground=colors["df"]),
+        widget.Sep(),
+        widget.Battery(format="{percent:2.0%} {hour:d}:{min:02d}", foreground=colors["battery"]),
+        widget.Sep(),
+        widget.Clock(format=" %a %d-%m-%Y - %H:%M:%S", update_interval=5, foreground=colors["clock"]),
+    ]
 
-def create_screen_bar(visible_groups):
+    if show_systray:
+        bootom_bar.append(widget.Sep())
+        bootom_bar.append(widget.Systray(icon_size=30))
+        bootom_bar.append(
+            widget.Spacer(length=12),
+        )
+    else:
+        bootom_bar.append(
+            widget.Spacer(length=12),
+        )
+
     return Screen(
-        top=bar.Bar([
-            widget.TaskList(
-                    highlight_method="block",
-                    border="#243e80",
-                    max_title_width=400
-                    ),
-            widget.Spacer(),
-            widget.WidgetBox(widgets=[
-                widget.Sep(),
-                widget.Spacer(length=10),
-                widget.CPU(),
-                widget.Spacer(length=10),
-                widget.TextBox(text="Memory"),
-                widget.Memory(),
-
-            ],
-                text_closed="Sys info [>]  ",
-                text_open="[>]  "
-
-            ),
-            widget.Sep(),
-            widget.Net(),
-            widget.Sep(),
-            widget.Wttr(location={"Copenhagen": "Copenhagen"}, format="CPH:  %t  %c  %m  %p")
-        ],
-            34,  # 44
-            background="#1f1d1d"
-        ),
-        bottom=bar.Bar(
+        top=bar.Bar(
             [
-                widget.Sep(),
-                widget.GroupBox(visible_groups=visible_groups),
-                widget.Sep(),
-                widget.CurrentLayoutIcon(),
-                widget.Sep(),
-                widget.Notify(
-                    default_timeout=10,
-                    parse_text=lambda e: "Notification -> " + e,
-                    foreground="ff0000",
+                widget.TaskList(
+                    highlight_method="block", border="#243e80", max_title_width=400,
                 ),
-                widget.Prompt(),
                 widget.Spacer(),
-                widget.CheckUpdates(
-                    distro="Ubuntu",
-                    colour_no_updates="00ff00",
-                    execute="sudo apt update",
-                    no_update_string="0 Updates",
-                    custom_command="apt list --upgradable",
-                    custom_command_modify=lambda e: e - 1,
-                    mouse_callbacks={"Button1": lazy.spawn("update-manager")}
+                widget.Net(format=" {down} ↓↑{up}", foreground=colors["net"]),
+                widget.Sep(),
+                widget.Wttr(
+                    location={"Copenhagen": "Copenhagen"}, format="CPH:  %t  %c  %m  %p",
+                    foreground=colors["wttr"],
                 ),
-                widget.Sep(),
-                widget.Battery(),
-                widget.Sep(),
-                widget.Clock(format='%a %d-%m-%Y - %H:%M:%S',
-                             update_interval=5),
-                widget.Sep(),
-                widget.Systray(
-                    icon_size=30,
-                ),
-                widget.Spacer(length=12)
             ],
-            34,  # 44
-            background="#1f1d1d"
+            44,  # 44, 34
+            background="#1f1d1d",
         ),
+        bottom=bar.Bar(bootom_bar, 44, background="#1f1d1d"),  # 44, 34
     )
 
 
@@ -98,9 +90,9 @@ class PrevFocus(object):
         # only store focus if the group is set
         if not group:
             return
-        group_focus = self.groups_focus.setdefault(group.name, {
-            "current": None, "prev": None
-        })
+        group_focus = self.groups_focus.setdefault(
+            group.name, {"current": None, "prev": None}
+        )
         # don't change prev if the current focus is the same as before
         if group_focus["current"] == window:
             return
@@ -195,11 +187,10 @@ def switch_group_and_keep_screen_pos(group: Group):
 
         if len(qtile.screens) == 1:
             pre_screen = qtile.current_screen
-            qtile.groups_map[name].cmd_toscreen()
-        
+            qtile.groups_map[name].cmd_toscreen(toggle=False)
+
             if qtile.current_screen != pre_screen:
                 center_mouse_on_current_screen(qtile.current_screen)
-
 
             group_screen_index[0].extend(group_screen_index[1])
             group_screen_index[1] = []
@@ -209,11 +200,11 @@ def switch_group_and_keep_screen_pos(group: Group):
             if name in scrren_index_groups:
                 pre_screen = qtile.current_screen
                 qtile.focus_screen(index)
-                qtile.groups_map[name].cmd_toscreen()
-                
+                qtile.groups_map[name].cmd_toscreen(toggle=False)
+
                 if qtile.current_screen != pre_screen:
                     center_mouse_on_current_screen(qtile.current_screen)
-                
+
                 break
 
     return _inner
@@ -238,32 +229,27 @@ def extend_bar(qtile: Qtile):
     logger.warning(len(screens))
     qtile.cmd_reconfigure_screens()
 
+
 # ------------------------------------------------------
 
 
 mod = "mod4"
 
-#terminal = guess_terminal()
+# terminal = guess_terminal()
 terminal = "terminator -x bash"
 
 keys = [
-
+    Key([mod], "Escape", lazy.spawn("systemctl suspend")),
+    Key([mod], "l", lazy.spawn("betterlockscreen -l")),
     Key([mod], "k", lazy.function(extend_bar)),
     Key([mod], "b", lazy.function(switch_group_screen)),
-
-    Key([], "XF86AudioRaiseVolume",
-        lazy.spawn("amixer sset Master 5%+")),
-    Key([], "XF86AudioLowerVolume",
-        lazy.spawn("amixer sset Master 5%-")),
-    Key([], "XF86AudioMute",
-        lazy.spawn("amixer sset Master toggle")),
-
+    Key([], "XF86AudioRaiseVolume", lazy.spawn("amixer sset Master 5%+")),
+    Key([], "XF86AudioLowerVolume", lazy.spawn("amixer sset Master 5%-")),
+    Key([], "XF86AudioMute", lazy.spawn("amixer sset Master toggle")),
     Key([mod], "Down", lazy.layout.down(), desc="Move focus down"),
     Key([mod], "Up", lazy.layout.up(), desc="Move focus up"),
-
     Key([mod], "Right", lazy.function(move_focus_to_neighbor, "right")),
-    Key([mod], "Left",  lazy.function(move_focus_to_neighbor, "left")),
-
+    Key([mod], "Left", lazy.function(move_focus_to_neighbor, "left")),
     Key(["mod1"], "1", lazy.function(move_focus_to_index, 0)),
     Key(["mod1"], "2", lazy.function(move_focus_to_index, 1)),
     Key(["mod1"], "3", lazy.function(move_focus_to_index, 2)),
@@ -275,64 +261,79 @@ keys = [
     Key(["mod1"], "9", lazy.function(move_focus_to_index, 8)),
 
     Key([mod], "d", lazy.spawn("dmenu_run -l 10")),
-
-    Key([mod, "shift"], "Left", lazy.layout.shuffle_left(),
-        desc="Move window to the left"),
-    Key([mod, "shift"], "Right", lazy.layout.shuffle_right(),
-        desc="Move window to the right"),
-    Key([mod, "shift"], "Down", lazy.layout.shuffle_down(),
-        desc="Move window down"),
+    Key(
+        [mod, "shift"],
+        "Left",
+        lazy.layout.shuffle_left(),
+        desc="Move window to the left",
+    ),
+    Key(
+        [mod, "shift"],
+        "Right",
+        lazy.layout.shuffle_right(),
+        desc="Move window to the right",
+    ),
+    Key([mod, "shift"], "Down", lazy.layout.shuffle_down(), desc="Move window down"),
     Key([mod, "shift"], "Up", lazy.layout.shuffle_up(), desc="Move window up"),
-
-    Key([mod, "control"], "Left", lazy.layout.grow_left(),
-        desc="Grow window to the left"),
-    Key([mod, "control"], "Right", lazy.layout.grow_right(),
-        desc="Grow window to the right"),
-    Key([mod, "control"], "Down", lazy.layout.grow_down(),
-        desc="Grow window down"),
+    Key(
+        [mod, "control"],
+        "Left",
+        lazy.layout.grow_left(),
+        desc="Grow window to the left",
+    ),
+    Key(
+        [mod, "control"],
+        "Right",
+        lazy.layout.grow_right(),
+        desc="Grow window to the right",
+    ),
+    Key([mod, "control"], "Down", lazy.layout.grow_down(), desc="Grow window down"),
     Key([mod, "control"], "Up", lazy.layout.grow_up(), desc="Grow window up"),
-
     Key([mod], "n", lazy.layout.normalize(), desc="Reset all window sizes"),
-
     Key([mod], "Return", lazy.spawn(terminal), desc="Launch terminal"),
-
     # Toggle between different layouts as defined below
     Key([mod], "w", lazy.next_layout(), desc="Toggle between layouts"),
     Key([mod, "shift"], "q", lazy.window.kill(), desc="Kill focused window"),
-
     Key([mod, "control"], "r", lazy.restart(), desc="Reload the config"),
     Key(["mod1"], "Tab", lazy.function(PrevFocus())),
     Key([mod], "Tab", lazy.function(switch_to_last_group)),
-
     Key(["mod1", "shift"], "Right", lazy.function(move_window, "right")),
     Key(["mod1", "shift"], "Left", lazy.function(move_window, "left")),
-
     Key([mod], "Escape", lazy.spawn("powerDown")),
 ]
 
 groups = [Group(i) for i in "123456789"]
 
 for i in groups:
-    keys.extend([
-        # Key([mod], i.name, lazy.group[i.name].toscreen(),
-        #    desc="Switch to group {}".format(i.name)),
-
-        Key([mod], i.name, lazy.function(switch_group_and_keep_screen_pos(i)),
-            desc="Switch to group {}".format(i.name)),
-
-
-        Key([mod, "shift"], i.name, lazy.window.togroup(i.name, switch_group=True),
-            desc="Switch to & move focused window to group {}".format(i.name)),
-    ])
+    keys.extend(
+        [
+            # Key([mod], i.name, lazy.group[i.name].toscreen(),
+            #    desc="Switch to group {}".format(i.name)),
+            Key(
+                [mod],
+                i.name,
+                lazy.function(switch_group_and_keep_screen_pos(i)),
+                desc="Switch to group {}".format(i.name),
+            ),
+            Key(
+                [mod, "shift"],
+                i.name,
+                lazy.window.togroup(i.name, switch_group=False),
+                desc="Switch to & move focused window to group {}".format(
+                    i.name),
+            ),
+        ]
+    )
 
 layouts = [
     layout.Max(),
-    layout.Columns(border_focus_stack=['#d75f5f', '#8f3d3d'], border_width=4, margin=6),
+    layout.Columns(border_focus_stack=[
+                   "#d75f5f", "#8f3d3d"], border_width=4, margin=6),
 ]
 
 widget_defaults = dict(
-    font='sans',
-    fontsize=18,  # 26
+    font="sans",
+    fontsize=26,  # 26, 18
     padding=6,
 )
 
@@ -340,7 +341,7 @@ extension_defaults = widget_defaults.copy()
 
 
 screens = [
-    create_screen_bar(group_screen_index[0]),
+    create_screen_bar(group_screen_index[0], True),
     create_screen_bar(group_screen_index[1]),
     create_screen_bar(group_screen_index[2]),
     create_screen_bar(group_screen_index[3]),
@@ -352,14 +353,18 @@ screens = [
 ]
 
 
-
 # Drag floating layouts.
 mouse = [
-    Drag([mod], "Button1", lazy.window.set_position_floating(),
-         start=lazy.window.get_position()),
-    Drag([mod], "Button3", lazy.window.set_size_floating(),
-         start=lazy.window.get_size()),
-    Click([mod], "Button2", lazy.window.bring_to_front())
+    Drag(
+        [mod],
+        "Button1",
+        lazy.window.set_position_floating(),
+        start=lazy.window.get_position(),
+    ),
+    Drag(
+        [mod], "Button3", lazy.window.set_size_floating(), start=lazy.window.get_size()
+    ),
+    Click([mod], "Button2", lazy.window.bring_to_front()),
 ]
 
 dgroups_key_binder = None
@@ -367,16 +372,18 @@ dgroups_app_rules = []  # type: List
 follow_mouse_focus = True
 bring_front_click = False
 cursor_warp = False
-floating_layout = layout.Floating(float_rules=[
-    # Run the utility of `xprop` to see the wm class and name of an X client.
-    *layout.Floating.default_float_rules,
-    Match(wm_class='confirmreset'),  # gitk
-    Match(wm_class='makebranch'),  # gitk
-    Match(wm_class='maketag'),  # gitk
-    Match(wm_class='ssh-askpass'),  # ssh-askpass
-    Match(title='branchdialog'),  # gitk
-    Match(title='pinentry'),  # GPG key password entry
-])
+floating_layout = layout.Floating(
+    float_rules=[
+        # Run the utility of `xprop` to see the wm class and name of an X client.
+        *layout.Floating.default_float_rules,
+        Match(wm_class="confirmreset"),  # gitk
+        Match(wm_class="makebranch"),  # gitk
+        Match(wm_class="maketag"),  # gitk
+        Match(wm_class="ssh-askpass"),  # ssh-askpass
+        Match(title="branchdialog"),  # gitk
+        Match(title="pinentry"),  # GPG key password entry
+    ]
+)
 
 auto_fullscreen = True
 focus_on_window_activation = "smart"
@@ -389,7 +396,7 @@ auto_minimize = True
 
 @hook.subscribe.startup_once
 def start_once():
-    auto = os.path.expanduser('~/.config/qtile/autostart.sh')
+    auto = os.path.expanduser("~/.config/qtile/autostart.sh")
     subprocess.Popen([auto])
 
 
