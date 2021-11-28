@@ -7,15 +7,18 @@ from libqtile.lazy import lazy
 from libqtile.utils import guess_terminal
 from libqtile.log_utils import logger
 
+from custom_widgets.ColoredGroupBox import ColoredGroupBox
+
 from pymouse import PyMouse
 
 import os
 import subprocess
 
+
+
 colors = {
     "net": ["#1D7EC6", "#1D7EC6"],  # net
     "wttr": ["#C6651D", "#C6651D"],  # wttr
-    
     "cpu": ["#C6651D", "#C6651D"],  # cpu
     "memory": ["#1D7EC6", "#1D7EC6"],  # memory
     "df": ["#C61D7E", "#C61D7E"],  # DF
@@ -23,25 +26,55 @@ colors = {
     "clock": ["#C61D29", "#C61D29"],  # clock
 }
 
+
 def create_screen_bar(visible_groups, show_systray=False):
     bootom_bar = [
         widget.Sep(),
-        widget.GroupBox(visible_groups=visible_groups),
+        ColoredGroupBox(
+            visible_groups=visible_groups,
+            active=[
+                ["#ff0000", "#0000ff"],
+                ["#ff0000", "#00ee00"],
+                ["#00ff00", "#aaffaa"],
+                ["#ffffff", "#0000ff"],
+                ["#ff0000", "#ffffff"],
+                ["#ff0000", "#0000ff"],
+                ["#C6651D", "#00ff00"],
+                ["#00ff00", "#ffffff"],
+                ["#ffffff", "#0000ff"],
+            ],
+        ),
         widget.Sep(),
         widget.CurrentLayoutIcon(),
         widget.Sep(),
         widget.Prompt(),
         widget.Spacer(),
         widget.Sep(),
-        widget.CPU(format='{freq_current}GHz {load_percent}%', foreground=colors["cpu"]),
+        widget.CPU(
+            format="{freq_current}GHz {load_percent}%", foreground=colors["cpu"]
+        ),
         widget.Sep(),
-        widget.Memory(format="{MemUsed: .0f}{mm}/{MemTotal: .0f}{mm}", foreground=colors["memory"]),
+        widget.Memory(
+            format="{MemUsed: .0f}{mm}/{MemTotal: .0f}{mm}",
+            foreground=colors["memory"],
+        ),
         widget.Sep(),
-        widget.DF(visible_on_warn=False, format=" {f}/{s} GB", warn_space=50, foreground=colors["df"]),
+        widget.DF(
+            visible_on_warn=False,
+            format=" {f}/{s} GB",
+            warn_space=50,
+            foreground=colors["df"],
+        ),
         widget.Sep(),
-        widget.Battery(format="{percent:2.0%} {hour:d}:{min:02d}", foreground=colors["battery"]),
+        widget.Battery(
+            format="{percent:2.0%} {hour:d}:{min:02d}", foreground=colors["battery"]
+        ),
         widget.Sep(),
-        widget.Clock(format=" %a %d-%m-%Y - %H:%M:%S", update_interval=5, foreground=colors["clock"]),
+        widget.Clock(
+            format=" %a %d-%m-%Y - %H:%M:%S",
+            update_interval=5,
+            foreground=colors["clock"],
+        ),
     ]
 
     if show_systray:
@@ -59,13 +92,16 @@ def create_screen_bar(visible_groups, show_systray=False):
         top=bar.Bar(
             [
                 widget.TaskList(
-                    highlight_method="block", border="#243e80", max_title_width=400,
+                    highlight_method="block",
+                    border="#243e80",
+                    max_title_width=400,
                 ),
                 widget.Spacer(),
                 widget.Net(format=" {down} ↓↑{up}", foreground=colors["net"]),
                 widget.Sep(),
                 widget.Wttr(
-                    location={"Copenhagen": "Copenhagen"}, format="CPH:  %t  %c  %m  %p",
+                    location={"Copenhagen": "Copenhagen"},
+                    format="CPH:  %t  %c  %m  %p",
                     foreground=colors["wttr"],
                 ),
             ],
@@ -259,7 +295,6 @@ keys = [
     Key(["mod1"], "7", lazy.function(move_focus_to_index, 6)),
     Key(["mod1"], "8", lazy.function(move_focus_to_index, 7)),
     Key(["mod1"], "9", lazy.function(move_focus_to_index, 8)),
-
     Key([mod], "d", lazy.spawn("dmenu_run -l 10")),
     Key(
         [mod, "shift"],
@@ -302,13 +337,23 @@ keys = [
     Key([mod], "Escape", lazy.spawn("powerDown")),
 ]
 
-groups = [Group(i) for i in "123456789"]
+labels = [
+    "",  # dev
+    "",  # browser
+    "",  # spotify
+    "",  # terminal
+    "",  # htop
+    "",  # games
+    "",  # paw print
+    "",  # linux
+    "",  # cog
+]
+
+groups = [Group(i, label=labels[int(i) - 1]) for i in "123456789"]
 
 for i in groups:
     keys.extend(
         [
-            # Key([mod], i.name, lazy.group[i.name].toscreen(),
-            #    desc="Switch to group {}".format(i.name)),
             Key(
                 [mod],
                 i.name,
@@ -319,16 +364,14 @@ for i in groups:
                 [mod, "shift"],
                 i.name,
                 lazy.window.togroup(i.name, switch_group=False),
-                desc="Switch to & move focused window to group {}".format(
-                    i.name),
+                desc="Switch to & move focused window to group {}".format(i.name),
             ),
         ]
     )
 
 layouts = [
     layout.Max(),
-    layout.Columns(border_focus_stack=[
-                   "#d75f5f", "#8f3d3d"], border_width=4, margin=6),
+    layout.Columns(border_focus_stack=["#d75f5f", "#8f3d3d"], border_width=4, margin=6),
 ]
 
 widget_defaults = dict(
