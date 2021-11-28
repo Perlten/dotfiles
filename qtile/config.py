@@ -273,6 +273,7 @@ mod = "mod4"
 terminal = "terminator -x bash"
 
 keys = [
+    Key([mod], "c", lazy.spawn("roficlip")),
     Key([mod, "control"], "m", lazy.spawn("pavucontrol")),
     Key([mod], "Escape", lazy.spawn("systemctl suspend")),
     Key([mod], "l", lazy.spawn("betterlockscreen -l")),
@@ -294,7 +295,8 @@ keys = [
     Key(["mod1"], "7", lazy.function(move_focus_to_index, 6)),
     Key(["mod1"], "8", lazy.function(move_focus_to_index, 7)),
     Key(["mod1"], "9", lazy.function(move_focus_to_index, 8)),
-    Key([mod], "d", lazy.spawn("dmenu_run -l 10")),
+    Key([mod], "d", lazy.spawn("rofi -show run")),
+    Key([mod], "p", lazy.spawn("rofi -show window")),
     Key(
         [mod, "shift"],
         "Left",
@@ -450,3 +452,9 @@ def start_once():
 # We choose LG3D to maximize irony: it is a 3D non-reparenting WM written in
 # java that happens to be on java's whitelist.
 wmname = "LG3D"
+
+
+
+
+#### software used
+# lxappearance # for changing the theme
