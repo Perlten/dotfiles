@@ -15,7 +15,6 @@ import os
 import subprocess
 
 
-
 colors = {
     "net": ["#1D7EC6", "#1D7EC6"],  # net
     "wttr": ["#C6651D", "#C6651D"],  # wttr
@@ -33,7 +32,7 @@ def create_screen_bar(visible_groups, show_systray=False):
         ColoredGroupBox(
             visible_groups=visible_groups,
             active=[
-                ["#ff0000", "#0000ff"],
+                ["#ff0000", "#00b0ff"],
                 ["#ff0000", "#00ee00"],
                 ["#00ff00", "#aaffaa"],
                 ["#ffffff", "#0000ff"],
@@ -67,7 +66,9 @@ def create_screen_bar(visible_groups, show_systray=False):
         ),
         widget.Sep(),
         widget.Battery(
-            format="{percent:2.0%} {hour:d}:{min:02d}", foreground=colors["battery"]
+            format="{percent:2.0%} {hour:d}:{min:02d}",
+            foreground=colors["battery"],
+            notify_below=20,
         ),
         widget.Sep(),
         widget.Clock(
@@ -79,10 +80,7 @@ def create_screen_bar(visible_groups, show_systray=False):
 
     if show_systray:
         bootom_bar.append(widget.Sep())
-        bootom_bar.append(widget.Systray(icon_size=30))
-        bootom_bar.append(
-            widget.Spacer(length=12),
-        )
+        bootom_bar.append(widget.Systray(icon_size=40, padding=0))
     else:
         bootom_bar.append(
             widget.Spacer(length=12),
@@ -106,9 +104,9 @@ def create_screen_bar(visible_groups, show_systray=False):
                 ),
             ],
             44,  # 44, 34
-            background="#1f1d1d",
+            background="#1f1d1dff",
         ),
-        bottom=bar.Bar(bootom_bar, 44, background="#1f1d1d"),  # 44, 34
+        bottom=bar.Bar(bootom_bar, 44, background="#1f1d1dff"),  # 44, 34
     )
 
 
@@ -253,7 +251,7 @@ def switch_group_screen(qtile: Qtile):
         if name in scrren_index_groups:
             name_index = scrren_index_groups.index(name)
             scrren_index_groups.pop(name_index)
-            logger.warning(len(qtile.screens))
+
             new_location = (index + 1) % len(qtile.screens)
             group_screen_index[new_location].append(name)
 
@@ -275,6 +273,7 @@ mod = "mod4"
 terminal = "terminator -x bash"
 
 keys = [
+    Key([mod, "control"], "m", lazy.spawn("pavucontrol")),
     Key([mod], "Escape", lazy.spawn("systemctl suspend")),
     Key([mod], "l", lazy.spawn("betterlockscreen -l")),
     Key([mod], "k", lazy.function(extend_bar)),
@@ -334,7 +333,6 @@ keys = [
     Key([mod], "Tab", lazy.function(switch_to_last_group)),
     Key(["mod1", "shift"], "Right", lazy.function(move_window, "right")),
     Key(["mod1", "shift"], "Left", lazy.function(move_window, "left")),
-    Key([mod], "Escape", lazy.spawn("powerDown")),
 ]
 
 labels = [
