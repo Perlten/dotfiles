@@ -258,26 +258,19 @@ def switch_group_screen(qtile: Qtile):
             break
 
 
-def extend_bar(qtile: Qtile):
-    screens.append(create_screen_bar(len(screens)))
-    logger.warning(len(screens))
-    qtile.cmd_reconfigure_screens()
-
-
 # ------------------------------------------------------
 
 
 mod = "mod4"
 
 # terminal = guess_terminal()
-terminal = "terminator -x bash"
+terminal = "terminator"
 
 keys = [
     Key([mod], "c", lazy.spawn("roficlip")),
     Key([mod, "control"], "m", lazy.spawn("pavucontrol")),
     Key([mod], "Escape", lazy.spawn("systemctl suspend")),
     Key([mod], "l", lazy.spawn("betterlockscreen -l")),
-    Key([mod], "k", lazy.function(extend_bar)),
     Key([mod], "b", lazy.function(switch_group_screen)),
     Key([], "XF86AudioRaiseVolume", lazy.spawn("amixer sset Master 5%+")),
     Key([], "XF86AudioLowerVolume", lazy.spawn("amixer sset Master 5%-")),
@@ -458,3 +451,6 @@ wmname = "LG3D"
 
 #### software used
 # lxappearance # for changing the theme
+# autokey # for keybindings
+# bmenu # for the menu (pointer speed and natural scrolling)
+# trash-cli # for the trash

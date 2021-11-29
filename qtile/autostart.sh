@@ -9,3 +9,4 @@ xss-lock betterlockscreen -l &  # Lock screen on suspend
 pamac-tray & # pacman update applet
 dunst & # notification daemon
 clipster -d & # Clipboard manager
+autokey-gtk & # Auto keybindings
