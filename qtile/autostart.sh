@@ -1,5 +1,6 @@
 #!/usr/bin/bash 
 
+# Programs
 picom & # Compositor
 nitrogen --restore & # Wallpaper
 blueman-applet & # Bluetooth applet
@@ -10,3 +11,7 @@ pamac-tray & # pacman update applet
 dunst & # notification daemon
 clipster -d & # Clipboard manager
 autokey-gtk & # Auto keybindings
+
+# Commands
+xset s off # Disable screen saver
+xset -dpms # Disable DPMS (Energy Star) features.

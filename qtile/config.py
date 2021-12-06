@@ -1,6 +1,7 @@
 from typing import List  # noqa: F401
 
 from libqtile import bar, layout, widget, hook
+from libqtile.backend.base import Window
 from libqtile.config import Click, Drag, Group, Key, Match, Screen
 from libqtile.core.manager import Qtile
 from libqtile.lazy import lazy
@@ -8,6 +9,7 @@ from libqtile.utils import guess_terminal
 from libqtile.log_utils import logger
 
 from custom_widgets.ColoredGroupBox import ColoredGroupBox
+from custom_widgets.NumberedTaskList import NumberedTaskList
 
 from pymouse import PyMouse
 
@@ -89,7 +91,7 @@ def create_screen_bar(visible_groups, show_systray=False):
     return Screen(
         top=bar.Bar(
             [
-                widget.TaskList(
+                NumberedTaskList(
                     highlight_method="block",
                     border="#243e80",
                     max_title_width=400,
@@ -141,8 +143,25 @@ class PrevFocus(object):
             group.focus(prev, False)
 
 
-def switch_to_last_group(qtile: Qtile):
-    qtile.current_screen.set_group(qtile.current_screen.previous_group)
+class PrevGroup(object):
+    def __init__(self):
+        self.previous_group_list = []
+        hook.subscribe.client_focus(self.on_changegroup)
+
+    def on_changegroup(self, window: Window):
+        new_group = window.group
+        if (
+            len(self.previous_group_list) < 1
+            or new_group != self.previous_group_list[-1]
+        ):
+            self.previous_group_list.append(new_group)
+
+        if len(self.previous_group_list) > 2:
+            self.previous_group_list.pop(0)
+
+    def __call__(self, qtile):
+        group_to_switch = self.previous_group_list[-2]
+        switch_group_and_keep_screen_pos(group_to_switch)(qtile)
 
 
 def center_mouse_on_current_screen(c_screen: Screen):
@@ -269,7 +288,7 @@ terminal = "terminator"
 keys = [
     Key([mod], "c", lazy.spawn("roficlip")),
     Key([mod, "control"], "m", lazy.spawn("pavucontrol")),
-    Key([mod], "Escape", lazy.spawn("systemctl suspend")),
+    Key([mod], "Escape", lazy.spawn("systemctl hibernate")),
     Key([mod], "l", lazy.spawn("betterlockscreen -l")),
     Key([mod], "b", lazy.function(switch_group_screen)),
     Key([], "XF86AudioRaiseVolume", lazy.spawn("amixer sset Master 5%+")),
@@ -325,7 +344,7 @@ keys = [
     Key([mod, "shift"], "q", lazy.window.kill(), desc="Kill focused window"),
     Key([mod, "control"], "r", lazy.restart(), desc="Reload the config"),
     Key(["mod1"], "Tab", lazy.function(PrevFocus())),
-    Key([mod], "Tab", lazy.function(switch_to_last_group)),
+    Key([mod], "Tab", lazy.function(PrevGroup())),
     Key(["mod1", "shift"], "Right", lazy.function(move_window, "right")),
     Key(["mod1", "shift"], "Left", lazy.function(move_window, "left")),
 ]
@@ -447,10 +466,9 @@ def start_once():
 wmname = "LG3D"
 
 
-
-
 #### software used
 # lxappearance # for changing the theme
 # autokey # for keybindings
 # bmenu # for the menu (pointer speed and natural scrolling)
 # trash-cli # for the trash
+# oh_my_zsh # for the zsh shell
