@@ -42,8 +42,6 @@ show-icons: true;
 /*	scroll-method: 0;*/
 /*	window-format: "{w}    {c}   {t}";*/
 /*	click-to-exit: true;*/
-theme: "android_notification.rasi"; 
-/* theme: "slate"; */
 /*	max-history-size: 25;*/
 /*	combi-hide-mode-prefix: false;*/
 /*	matching-negate-char: '-' /* unsupported */;*/
@@ -146,3 +144,5 @@ theme: "android_notification.rasi";
       sorting-method:    "name";
   }
 }
+
+@theme "android_notification.rasi"

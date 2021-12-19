@@ -209,8 +209,25 @@ def move_focus_to_index(qtile: Qtile, *args):
     group = qtile.current_group
     windowList: List = group.windows
 
+    window: Window = windowList[index]
+
+    # If current layout is not max center
+    if qtile.current_layout.info()["name"] != "max":
+        info = window.info()
+        width = info["width"]
+        height = info["height"]
+        x = info["x"]
+        y = info["y"]
+
+        m = PyMouse()
+        x = x + (width // 2)
+        y = y + (height // 2)
+        m.move(x, y)
+
+
     if len(windowList) > index:
         group.focus(windowList[index])
+
 
 
 def get_bar(screen, position=None) -> bar.Bar:
@@ -286,6 +303,9 @@ mod = "mod4"
 terminal = "terminator"
 
 keys = [
+    Key([mod], "F12", lazy.spawn("dbus-send --print-reply --dest=org.mpris.MediaPlayer2.spotify /org/mpris/MediaPlayer2 org.mpris.MediaPlayer2.Player.Next")),
+    Key([mod], "F11", lazy.spawn("dbus-send --print-reply --dest=org.mpris.MediaPlayer2.spotify /org/mpris/MediaPlayer2 org.mpris.MediaPlayer2.Player.Previous")),
+
     Key([mod], "c", lazy.spawn("roficlip")),
     Key([mod, "control"], "m", lazy.spawn("pavucontrol")),
     Key([mod], "Escape", lazy.spawn("systemctl hibernate")),
@@ -472,3 +492,4 @@ wmname = "LG3D"
 # bmenu # for the menu (pointer speed and natural scrolling)
 # trash-cli # for the trash
 # oh_my_zsh # for the zsh shell
+# oh_my_bash # for the bash shell
