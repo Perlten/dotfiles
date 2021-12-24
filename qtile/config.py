@@ -1,4 +1,4 @@
-from typing import List  # noqa: F401
+from typing import List 
 
 from libqtile import bar, layout, widget, hook
 from libqtile.backend.base import Window
@@ -17,6 +17,9 @@ import os
 import subprocess
 
 
+def dummy_function(*args):
+    pass
+ 
 colors = {
     "net": ["#1D7EC6", "#1D7EC6"],  # net
     "wttr": ["#C6651D", "#C6651D"],  # wttr
@@ -26,7 +29,6 @@ colors = {
     "battery": ["#7EC61D", "#7EC61D"],  # battery
     "clock": ["#C61D29", "#C61D29"],  # clock
 }
-
 
 def create_screen_bar(visible_groups, show_systray=False):
     bootom_bar = [
@@ -231,7 +233,6 @@ def move_focus_to_index(qtile: Qtile, *args):
 
 
 def get_bar(screen, position=None) -> bar.Bar:
-    d: Group = None
     if not position:
         position = "bottom"
     bar = getattr(screen, position)
@@ -266,8 +267,8 @@ def switch_group_and_keep_screen_pos(group: Group):
             group_screen_index[1] = []
             return
 
-        for index, scrren_index_groups in enumerate(group_screen_index):
-            if name in scrren_index_groups:
+        for index, screen_index_groups in enumerate(group_screen_index):
+            if name in screen_index_groups:
                 pre_screen = qtile.current_screen
                 qtile.focus_screen(index)
                 qtile.groups_map[name].cmd_toscreen(toggle=False)
@@ -282,16 +283,24 @@ def switch_group_and_keep_screen_pos(group: Group):
 
 def switch_group_screen(qtile: Qtile):
     name = qtile.current_group.name
+    group = qtile.current_group
 
-    for index, scrren_index_groups in enumerate(group_screen_index):
-        if name in scrren_index_groups:
-            name_index = scrren_index_groups.index(name)
-            scrren_index_groups.pop(name_index)
+    for index, screen_index_groups in enumerate(group_screen_index):
+        if name in screen_index_groups:
+            name_index = screen_index_groups.index(name)
+            screen_index_groups.pop(name_index)
 
             new_location = (index + 1) % len(qtile.screens)
             group_screen_index[new_location].append(name)
 
+            redraw_all_screens(qtile)
+            switch_group_and_keep_screen_pos(group)(qtile)
             break
+
+def redraw_all_screens(qtile: Qtile):
+    for screen in qtile.screens:
+        get_bar(screen, "top").draw()
+        get_bar(screen, "bottom").draw()
 
 
 # ------------------------------------------------------
@@ -316,8 +325,8 @@ keys = [
     Key([], "XF86AudioMute", lazy.spawn("amixer sset Master toggle")),
     Key([mod], "Down", lazy.layout.down(), desc="Move focus down"),
     Key([mod], "Up", lazy.layout.up(), desc="Move focus up"),
-    Key([mod], "Right", lazy.function(move_focus_to_neighbor, "right")),
-    Key([mod], "Left", lazy.function(move_focus_to_neighbor, "left")),
+    # Key([mod], "Right", lazy.function(move_focus_to_neighbor, "right")),
+    # Key([mod], "Left", lazy.function(move_focus_to_neighbor, "left")),
     Key(["mod1"], "1", lazy.function(move_focus_to_index, 0)),
     Key(["mod1"], "2", lazy.function(move_focus_to_index, 1)),
     Key(["mod1"], "3", lazy.function(move_focus_to_index, 2)),
@@ -367,6 +376,10 @@ keys = [
     Key([mod], "Tab", lazy.function(PrevGroup())),
     Key(["mod1", "shift"], "Right", lazy.function(move_window, "right")),
     Key(["mod1", "shift"], "Left", lazy.function(move_window, "left")),
+
+    # Reservers menu bottom
+    Key([], "Menu", lazy.function(lambda qtile: None)),
+
 ]
 
 labels = [
@@ -439,7 +452,7 @@ mouse = [
     Drag(
         [mod], "Button3", lazy.window.set_size_floating(), start=lazy.window.get_size()
     ),
-    Click([mod], "Button2", lazy.window.bring_to_front()),
+    Click([mod], "Button2", lazy.window.toggle_floating()),
 ]
 
 dgroups_key_binder = None

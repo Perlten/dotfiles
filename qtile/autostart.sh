@@ -11,6 +11,7 @@ pamac-tray & # pacman update applet
 dunst & # notification daemon
 clipster -d & # Clipboard manager
 autokey-gtk & # Auto keybindings
+keymouse & # Controls mouse with keyboard
 
 # Commands
 xset s off # Disable screen saver
