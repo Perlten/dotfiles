@@ -1,12 +1,15 @@
 from typing import List 
 
 from libqtile import bar, layout, widget, hook
+import libqtile
 from libqtile.backend.base import Window
 from libqtile.config import Click, Drag, Group, Key, Match, Screen
 from libqtile.core.manager import Qtile
+from libqtile.group import _Group
 from libqtile.lazy import lazy
 from libqtile.utils import guess_terminal
 from libqtile.log_utils import logger
+
 
 from custom_widgets.ColoredGroupBox import ColoredGroupBox
 from custom_widgets.NumberedTaskList import NumberedTaskList
@@ -16,10 +19,6 @@ from pymouse import PyMouse
 import os
 import subprocess
 
-
-def dummy_function(*args):
-    pass
- 
 colors = {
     "net": ["#1D7EC6", "#1D7EC6"],  # net
     "wttr": ["#C6651D", "#C6651D"],  # wttr
@@ -29,6 +28,9 @@ colors = {
     "battery": ["#7EC61D", "#7EC61D"],  # battery
     "clock": ["#C61D29", "#C61D29"],  # clock
 }
+
+def print(data):
+    logger.warning(data)
 
 def create_screen_bar(visible_groups, show_systray=False):
     bootom_bar = [
@@ -252,6 +254,45 @@ group_screen_index = [
 ]
 
 
+
+
+@libqtile.hook.subscribe.client_managed
+def on_new_window(new_window: Window):
+    order_windows_based_on_layout(new_window.group)
+    
+
+def change_window_position(qtile:Qtile, direction):
+    current_layout = qtile.current_layout
+    if direction == "left":
+        current_layout.command("shuffle_left")()
+    elif direction == "right":
+        current_layout.command("shuffle_right")()
+    elif direction == "up":
+        current_layout.command("shuffle_up")()
+    elif direction == "down":
+        current_layout.command("shuffle_down")()
+    
+    order_windows_based_on_layout(qtile.current_group)  
+
+def order_windows_based_on_layout(current_group: _Group):
+    current_layout = current_group.layout
+
+    if current_layout.info().get("name") == "columns":
+        window_list = current_group.windows
+        columns = current_layout.info().get("columns")
+        
+        new_window_list = []               
+        
+        for colum in columns:
+            clients = colum.get("clients")
+            for client_name in clients:
+                window =  [window for window in window_list if window.name == client_name][0]
+                window_list.remove(window)
+                new_window_list.append(window)
+        print(new_window_list)    
+        current_group.windows = new_window_list
+ 
+
 def switch_group_and_keep_screen_pos(group: Group):
     def _inner(qtile: Qtile):
         name = group.name
@@ -338,20 +379,19 @@ keys = [
     Key(["mod1"], "9", lazy.function(move_focus_to_index, 8)),
     Key([mod], "d", lazy.spawn("rofi -show run")),
     Key([mod], "p", lazy.spawn("rofi -show window")),
-    Key(
-        [mod, "shift"],
-        "Left",
-        lazy.layout.shuffle_left(),
-        desc="Move window to the left",
-    ),
-    Key(
-        [mod, "shift"],
-        "Right",
-        lazy.layout.shuffle_right(),
-        desc="Move window to the right",
-    ),
-    Key([mod, "shift"], "Down", lazy.layout.shuffle_down(), desc="Move window down"),
-    Key([mod, "shift"], "Up", lazy.layout.shuffle_up(), desc="Move window up"),
+
+
+    # Key([mod, "shift"],"Left",lazy.layout.shuffle_left()),
+    # Key([mod, "shift"], "Right",lazy.layout.shuffle_right()),
+    # Key([mod, "shift"], "Down", lazy.layout.shuffle_down()),
+    # Key([mod, "shift"], "Up", lazy.layout.shuffle_up()),
+    
+    Key([mod, "shift"],"Left", lazy.function(change_window_position, "left")),
+    Key([mod, "shift"], "Right", lazy.function(change_window_position, "right")),
+    Key([mod, "shift"], "Down", lazy.function(change_window_position, "down")),
+    Key([mod, "shift"], "Up", lazy.function(change_window_position, "up")),
+    
+    
     Key(
         [mod, "control"],
         "Left",
@@ -372,12 +412,14 @@ keys = [
     Key([mod], "w", lazy.next_layout(), desc="Toggle between layouts"),
     Key([mod, "shift"], "q", lazy.window.kill(), desc="Kill focused window"),
     Key([mod, "control"], "r", lazy.restart(), desc="Reload the config"),
+    
     Key(["mod1"], "Tab", lazy.function(PrevFocus())),
     Key([mod], "Tab", lazy.function(PrevGroup())),
+
     Key(["mod1", "shift"], "Right", lazy.function(move_window, "right")),
     Key(["mod1", "shift"], "Left", lazy.function(move_window, "left")),
 
-    # Reservers menu bottom
+    # Reservers menu bottom... its stupid
     Key([], "Menu", lazy.function(lambda qtile: None)),
 
 ]
