@@ -30,5 +30,5 @@ cp -r ~/.bashrc ./bash && echo "Copied bashrc configs"
 cp -r ~/.shell_aliases ./bash && echo "Copied shell_aliases configs"
 
 git add --all && \
-git commit -m $1 && \
+git commit -m "$1" && \
 git push
