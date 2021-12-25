@@ -261,6 +261,11 @@ def on_new_window(new_window: Window):
     order_windows_based_on_layout(new_window.group)
     
 
+@libqtile.hook.subscribe.layout_change
+def on_layout_change(_, current_group):
+    order_windows_based_on_layout(current_group)
+
+
 def change_window_position(qtile:Qtile, direction):
     current_layout = qtile.current_layout
     if direction == "left":
