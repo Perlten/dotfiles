@@ -7,7 +7,6 @@ die () {
 }
 
 
-[ "$#" -eq 1 ] || die "1 argument required, $# provided"
 
 
 rm -rf ./qtile && echo "removed qtile"
@@ -29,6 +28,8 @@ mkdir bash && echo "Created bash directory"
 cp -r ~/.bashrc ./bash && echo "Copied bashrc configs"
 cp -r ~/.shell_aliases ./bash && echo "Copied shell_aliases configs"
 
+git status
+[ "$#" -eq 1 ] || die "1 argument required, $# provided"
 git add --all && \
 git commit -m "$1" && \
 git push
