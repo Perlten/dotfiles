@@ -393,7 +393,7 @@ for index, i in enumerate(groups, 1):
             Key(
                 ["mod1", "shift"],
                 i.name,
-                lazy.function(lambda q: q.cmd_change_window_order(index)),
+                lazy.function(lambda q, index: q.cmd_change_window_order(index), index),
             ),
             Key(
                 [mod],
