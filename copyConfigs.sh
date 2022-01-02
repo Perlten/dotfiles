@@ -1,5 +1,7 @@
 #!/bin/bash
 
+git pull
+
 rm -r ~/.config/qtile && cp -r ./qtile ~/.config && echo "Copied qtile configs"
 rm -r ~/.config/picom && cp -r ./picom ~/.config && echo "Copied picom configs"
 rm -r ~/.config/autokey && cp -r ./autokey ~/.config && echo "Copied autokey configs"
