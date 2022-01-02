@@ -425,7 +425,8 @@ keys = [
     Key(["mod1", "shift"], "Left", lazy.function(move_window, "left")),
 
     # Reservers menu bottom... its stupid
-    Key([], "Menu", lazy.function(lambda qtile: None)),
+    Key([], "Menu", lazy.function(lambda _: None)),
+
 
 ]
 
