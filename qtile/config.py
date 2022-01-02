@@ -1,4 +1,5 @@
 from typing import List
+import os
 
 from libqtile import bar, layout, widget, hook
 import libqtile
@@ -486,6 +487,8 @@ auto_minimize = True
 
 @hook.subscribe.startup_once
 def start_once():
+    if os.getenv("QTILE_NO_START_ONCE"):
+        return 
     auto = os.path.expanduser("~/.config/qtile/autostart.sh")
     subprocess.Popen([auto])
 
