@@ -149,6 +149,7 @@ class PrevFocus(object):
         prev = group_focus["prev"]
         if prev and group.name == prev.group.name:
             group.focus(prev, False)
+            center_if_layout_not_max(prev)
 
 
 class PrevGroup(object):
