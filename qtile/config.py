@@ -1,4 +1,4 @@
-from typing import List 
+from typing import List
 
 from libqtile import bar, layout, widget, hook
 import libqtile
@@ -12,7 +12,6 @@ from libqtile.log_utils import logger
 
 
 from custom_widgets.ColoredGroupBox import ColoredGroupBox
-from custom_widgets.NumberedTaskList import NumberedTaskList
 
 from pymouse import PyMouse
 
@@ -29,8 +28,10 @@ colors = {
     "clock": ["#C61D29", "#C61D29"],  # clock
 }
 
+
 def print(data):
     logger.warning(data)
+
 
 def create_screen_bar(visible_groups, show_systray=False):
     bootom_bar = [
@@ -56,7 +57,8 @@ def create_screen_bar(visible_groups, show_systray=False):
         widget.Spacer(),
         widget.Sep(),
         widget.CPU(
-            format="{freq_current}GHz {load_percent}%", foreground=colors["cpu"]
+            format="{freq_current}GHz {load_percent}%",
+            foreground=colors["cpu"],
         ),
         widget.Sep(),
         widget.Memory(
@@ -95,7 +97,8 @@ def create_screen_bar(visible_groups, show_systray=False):
     return Screen(
         top=bar.Bar(
             [
-                NumberedTaskList(
+                widget.TaskList(
+                    window_name_location=True,
                     highlight_method="block",
                     border="#243e80",
                     max_title_width=400,
@@ -133,7 +136,7 @@ class PrevFocus(object):
         group_focus = self.groups_focus.setdefault(
             group.name, {"current": None, "prev": None}
         )
-        # don't change prev if the current focus is the same as before
+
         if group_focus["current"] == window:
             return
         group_focus["prev"] = group_focus["current"]
@@ -167,78 +170,69 @@ class PrevGroup(object):
         group_to_switch = self.previous_group_list[-2]
         switch_group_and_keep_screen_pos(group_to_switch)(qtile)
 
+def center_if_layout_not_max(window: Window):
+    layout_name = window.group.layout.name
+    if layout_name != "max":
+        info = window.info()
+        center_mouse(info)
 
-def center_mouse_on_current_screen(c_screen: Screen):
+def center_mouse(position):
+    width = position["width"]
+    height = position["height"]
+    x = position["x"]
+    y = position["y"]
+
     m = PyMouse()
-    x = c_screen.x + (c_screen.width // 2)
-    y = c_screen.y + (c_screen.height // 2)
+    x = x + (width // 2)
+    y = y + (height // 2)
     m.move(x, y)
 
 
-def move_window(qtile: Qtile, *args):
-    side = args[0]
-
-    group = qtile.current_group
-    windowList: List = group.windows
-    if not qtile.current_window:
-        return
-
-    offset = 1 if side == "right" else -1
-
-    windowIndex = windowList.index(qtile.current_window)
-
-    temp = windowList[windowIndex + offset]
-    windowList[windowIndex + offset] = windowList[windowIndex]
-    windowList[windowIndex] = temp
-
-    get_bar(qtile.current_screen, "top").draw()
+@libqtile.hook.subscribe.client_managed
+def on_new_window(new_window: Window):
+    order_windows_based_on_layout(new_window.group)
 
 
-def move_focus_to_neighbor(qtile: Qtile, *args):
-    side = args[0]
-
-    group = qtile.current_group
-    windowList: List = group.windows
-
-    offset = 1 if side == "right" else -1
-
-    windowIndex = windowList.index(qtile.current_window)
-    newWindowIndex = (windowIndex + offset) % len(windowList)
-
-    group.focus(windowList[newWindowIndex])
+@libqtile.hook.subscribe.layout_change
+def on_layout_change(_, current_group):
+    order_windows_based_on_layout(current_group)
 
 
-def move_focus_to_index(qtile: Qtile, *args):
-    index = args[0]
-    group = qtile.current_group
-    windowList: List = group.windows
+def change_window_position(qtile: Qtile, direction):
+    current_layout = qtile.current_layout
+    if direction == "left":
+        current_layout.command("shuffle_left")()
+    elif direction == "right":
+        current_layout.command("shuffle_right")()
+    elif direction == "up":
+        current_layout.command("shuffle_up")()
+    elif direction == "down":
+        current_layout.command("shuffle_down")()
 
-    window: Window = windowList[index]
-
-    # If current layout is not max center
-    if qtile.current_layout.info()["name"] != "max":
-        info = window.info()
-        width = info["width"]
-        height = info["height"]
-        x = info["x"]
-        y = info["y"]
-
-        m = PyMouse()
-        x = x + (width // 2)
-        y = y + (height // 2)
-        m.move(x, y)
+    order_windows_based_on_layout(qtile.current_group)
 
 
-    if len(windowList) > index:
-        group.focus(windowList[index])
+def order_windows_based_on_layout(current_group: _Group):
+    current_layout = current_group.layout
 
+    if current_layout.info().get("name") == "columns":
+        window_list = current_group.windows
+        columns = current_layout.info().get("columns")
 
+        new_window_list = []
 
-def get_bar(screen, position=None) -> bar.Bar:
-    if not position:
-        position = "bottom"
-    bar = getattr(screen, position)
-    return bar
+        for colum in columns:
+            clients = colum.get("clients")
+            for client_name in clients:
+                window = [
+                    window
+                    for window in window_list
+                    if window.name == client_name
+                ][0]
+                window_list.remove(window)
+                new_window_list.append(window)
+        print(new_window_list)
+        current_group.windows = new_window_list
 
 
 group_screen_index = [
@@ -254,50 +248,6 @@ group_screen_index = [
 ]
 
 
-
-
-@libqtile.hook.subscribe.client_managed
-def on_new_window(new_window: Window):
-    order_windows_based_on_layout(new_window.group)
-    
-
-@libqtile.hook.subscribe.layout_change
-def on_layout_change(_, current_group):
-    order_windows_based_on_layout(current_group)
-
-
-def change_window_position(qtile:Qtile, direction):
-    current_layout = qtile.current_layout
-    if direction == "left":
-        current_layout.command("shuffle_left")()
-    elif direction == "right":
-        current_layout.command("shuffle_right")()
-    elif direction == "up":
-        current_layout.command("shuffle_up")()
-    elif direction == "down":
-        current_layout.command("shuffle_down")()
-    
-    order_windows_based_on_layout(qtile.current_group)  
-
-def order_windows_based_on_layout(current_group: _Group):
-    current_layout = current_group.layout
-
-    if current_layout.info().get("name") == "columns":
-        window_list = current_group.windows
-        columns = current_layout.info().get("columns")
-        
-        new_window_list = []               
-        
-        for colum in columns:
-            clients = colum.get("clients")
-            for client_name in clients:
-                window =  [window for window in window_list if window.name == client_name][0]
-                window_list.remove(window)
-                new_window_list.append(window)
-        print(new_window_list)    
-        current_group.windows = new_window_list
- 
-
 def switch_group_and_keep_screen_pos(group: Group):
     def _inner(qtile: Qtile):
         name = group.name
@@ -307,7 +257,7 @@ def switch_group_and_keep_screen_pos(group: Group):
             qtile.groups_map[name].cmd_toscreen(toggle=False)
 
             if qtile.current_screen != pre_screen:
-                center_mouse_on_current_screen(qtile.current_screen)
+                center_mouse(qtile.current_screen.__dict__)
 
             group_screen_index[0].extend(group_screen_index[1])
             group_screen_index[1] = []
@@ -320,7 +270,7 @@ def switch_group_and_keep_screen_pos(group: Group):
                 qtile.groups_map[name].cmd_toscreen(toggle=False)
 
                 if qtile.current_screen != pre_screen:
-                    center_mouse_on_current_screen(qtile.current_screen)
+                    center_mouse(qtile.current_screen.__dict__)
 
                 break
 
@@ -343,10 +293,11 @@ def switch_group_screen(qtile: Qtile):
             switch_group_and_keep_screen_pos(group)(qtile)
             break
 
+
 def redraw_all_screens(qtile: Qtile):
     for screen in qtile.screens:
-        get_bar(screen, "top").draw()
-        get_bar(screen, "bottom").draw()
+        getattr(screen, "top").draw()
+        getattr(screen, "bottom").draw()
 
 
 # ------------------------------------------------------
@@ -358,9 +309,20 @@ mod = "mod4"
 terminal = "terminator"
 
 keys = [
-    Key([mod], "F12", lazy.spawn("dbus-send --print-reply --dest=org.mpris.MediaPlayer2.spotify /org/mpris/MediaPlayer2 org.mpris.MediaPlayer2.Player.Next")),
-    Key([mod], "F11", lazy.spawn("dbus-send --print-reply --dest=org.mpris.MediaPlayer2.spotify /org/mpris/MediaPlayer2 org.mpris.MediaPlayer2.Player.Previous")),
-
+    Key(
+        [mod],
+        "F12",
+        lazy.spawn(
+            "dbus-send --print-reply --dest=org.mpris.MediaPlayer2.spotify /org/mpris/MediaPlayer2 org.mpris.MediaPlayer2.Player.Next"
+        ),
+    ),
+    Key(
+        [mod],
+        "F11",
+        lazy.spawn(
+            "dbus-send --print-reply --dest=org.mpris.MediaPlayer2.spotify /org/mpris/MediaPlayer2 org.mpris.MediaPlayer2.Player.Previous"
+        ),
+    ),
     Key([mod], "c", lazy.spawn("roficlip")),
     Key([mod, "control"], "m", lazy.spawn("pavucontrol")),
     Key([mod], "Escape", lazy.spawn("systemctl hibernate")),
@@ -371,63 +333,32 @@ keys = [
     Key([], "XF86AudioMute", lazy.spawn("amixer sset Master toggle")),
     Key([mod], "Down", lazy.layout.down(), desc="Move focus down"),
     Key([mod], "Up", lazy.layout.up(), desc="Move focus up"),
-    # Key([mod], "Right", lazy.function(move_focus_to_neighbor, "right")),
-    # Key([mod], "Left", lazy.function(move_focus_to_neighbor, "left")),
-    Key(["mod1"], "1", lazy.function(move_focus_to_index, 0)),
-    Key(["mod1"], "2", lazy.function(move_focus_to_index, 1)),
-    Key(["mod1"], "3", lazy.function(move_focus_to_index, 2)),
-    Key(["mod1"], "4", lazy.function(move_focus_to_index, 3)),
-    Key(["mod1"], "5", lazy.function(move_focus_to_index, 4)),
-    Key(["mod1"], "6", lazy.function(move_focus_to_index, 5)),
-    Key(["mod1"], "7", lazy.function(move_focus_to_index, 6)),
-    Key(["mod1"], "8", lazy.function(move_focus_to_index, 7)),
-    Key(["mod1"], "9", lazy.function(move_focus_to_index, 8)),
     Key([mod], "d", lazy.spawn("rofi -show run")),
     Key([mod], "p", lazy.spawn("rofi -show window")),
-
-
-    # Key([mod, "shift"],"Left",lazy.layout.shuffle_left()),
-    # Key([mod, "shift"], "Right",lazy.layout.shuffle_right()),
-    # Key([mod, "shift"], "Down", lazy.layout.shuffle_down()),
-    # Key([mod, "shift"], "Up", lazy.layout.shuffle_up()),
-    
-    Key([mod, "shift"],"Left", lazy.function(change_window_position, "left")),
-    Key([mod, "shift"], "Right", lazy.function(change_window_position, "right")),
+    Key([mod, "shift"], "Left", lazy.function(change_window_position, "left")),
+    Key(
+        [mod, "shift"], "Right", lazy.function(change_window_position, "right")
+    ),
     Key([mod, "shift"], "Down", lazy.function(change_window_position, "down")),
     Key([mod, "shift"], "Up", lazy.function(change_window_position, "up")),
-    
-    
+    Key([mod, "control"], "Left", lazy.layout.grow_left()),
+    Key([mod, "control"], "Right", lazy.layout.grow_right()),
     Key(
         [mod, "control"],
-        "Left",
-        lazy.layout.grow_left(),
-        desc="Grow window to the left",
+        "Down",
+        lazy.layout.grow_down(),
     ),
-    Key(
-        [mod, "control"],
-        "Right",
-        lazy.layout.grow_right(),
-        desc="Grow window to the right",
-    ),
-    Key([mod, "control"], "Down", lazy.layout.grow_down(), desc="Grow window down"),
     Key([mod, "control"], "Up", lazy.layout.grow_up(), desc="Grow window up"),
     Key([mod], "n", lazy.layout.normalize(), desc="Reset all window sizes"),
     Key([mod], "Return", lazy.spawn(terminal), desc="Launch terminal"),
     # Toggle between different layouts as defined below
     Key([mod], "w", lazy.next_layout(), desc="Toggle between layouts"),
     Key([mod, "shift"], "q", lazy.window.kill(), desc="Kill focused window"),
-    Key([mod, "control"], "r", lazy.restart(), desc="Reload the config"),
-    
+    Key([mod, "control"], "r", lazy.reload_config(), desc="Reload the config"),
     Key(["mod1"], "Tab", lazy.function(PrevFocus())),
     Key([mod], "Tab", lazy.function(PrevGroup())),
-
-    Key(["mod1", "shift"], "Right", lazy.function(move_window, "right")),
-    Key(["mod1", "shift"], "Left", lazy.function(move_window, "left")),
-
     # Reservers menu bottom... its stupid
     Key([], "Menu", lazy.function(lambda _: None)),
-
-
 ]
 
 labels = [
@@ -444,9 +375,25 @@ labels = [
 
 groups = [Group(i, label=labels[int(i) - 1]) for i in "123456789"]
 
-for i in groups:
+for index, i in enumerate(groups, 1):
     keys.extend(
         [
+            Key(
+                ["mod1"],
+                i.name,
+                lazy.function(
+                    lambda q, index: (
+                        center_if_layout_not_max(q.current_group.windows[index - 1]),
+                        q.cmd_switch_window(index),
+                    ),
+                    index,
+                ),
+            ),
+            Key(
+                ["mod1", "shift"],
+                i.name,
+                lazy.function(lambda q: q.cmd_change_window_order(index)),
+            ),
             Key(
                 [mod],
                 i.name,
@@ -457,14 +404,18 @@ for i in groups:
                 [mod, "shift"],
                 i.name,
                 lazy.window.togroup(i.name, switch_group=False),
-                desc="Switch to & move focused window to group {}".format(i.name),
+                desc="Switch to & move focused window to group {}".format(
+                    i.name
+                ),
             ),
         ]
     )
 
 layouts = [
     layout.Max(),
-    layout.Columns(border_focus_stack=["#d75f5f", "#8f3d3d"], border_width=4, margin=6),
+    layout.Columns(
+        border_focus_stack=["#d75f5f", "#8f3d3d"], border_width=4, margin=6
+    ),
 ]
 
 widget_defaults = dict(
@@ -498,7 +449,10 @@ mouse = [
         start=lazy.window.get_position(),
     ),
     Drag(
-        [mod], "Button2", lazy.window.set_size_floating(), start=lazy.window.get_size()
+        [mod],
+        "Button2",
+        lazy.window.set_size_floating(),
+        start=lazy.window.get_size(),
     ),
     Click([mod], "Button3", lazy.window.toggle_floating()),
 ]

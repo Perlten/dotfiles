@@ -82,27 +82,31 @@ keys = [
 
 groups = [Group(i) for i in "123456789"]
 
-for i in groups:
+for index, i in enumerate(groups, 1):
     keys.extend(
         [
-            # mod1 + letter of group = switch to group
+            Key(
+                ["mod1"],
+                i.name,
+                lazy.switch_window(index)
+            ),
+            Key(
+                ["mod1", "shift"],
+                i.name,
+                lazy.change_window_order(index)
+            ),
             Key(
                 [mod],
                 i.name,
                 lazy.group[i.name].toscreen(),
                 desc="Switch to group {}".format(i.name),
             ),
-            # mod1 + shift + letter of group = switch to & move focused window to group
             Key(
                 [mod, "shift"],
                 i.name,
                 lazy.window.togroup(i.name, switch_group=True),
                 desc="Switch to & move focused window to group {}".format(i.name),
             ),
-            # Or, use below if you prefer not to switch to that group.
-            # # mod1 + shift + letter of group = move focused window to group
-            # Key([mod, "shift"], i.name, lazy.window.togroup(i.name),
-            #     desc="move focused window to group {}".format(i.name)),
         ]
     )
 
@@ -133,7 +137,7 @@ screens = [
     Screen(
         bottom=bar.Bar(
             [
-                widget.TaskList(),
+                widget.TaskList(window_name_location=False),
                 widget.CurrentLayout(),
                 widget.GroupBox(),
                 widget.Prompt(),
