@@ -137,7 +137,7 @@ screens = [
     Screen(
         bottom=bar.Bar(
             [
-                widget.TaskList(window_name_location=False),
+                widget.TaskList(window_name_location=True),
                 widget.CurrentLayout(),
                 widget.GroupBox(),
                 widget.Prompt(),
