@@ -82,18 +82,18 @@ keys = [
 
 groups = [Group(i) for i in "123456789"]
 
-for index, i in enumerate(groups, 1):
+for i in groups:
     keys.extend(
         [
             Key(
                 ["mod1"],
                 i.name,
-                lazy.switch_window(index)
+                lazy.group.focus_by_index(int(i.name) - 1),
             ),
             Key(
                 ["mod1", "shift"],
                 i.name,
-                lazy.change_window_order(index)
+                lazy.group.swap_window_order(int(i.name) - 1),
             ),
             Key(
                 [mod],
