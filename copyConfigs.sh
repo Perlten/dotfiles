@@ -8,5 +8,9 @@ rm -r ~/.config/autokey && cp -r ./autokey ~/.config && echo "Copied autokey con
 rm -r ~/.config/rofi && cp -r ./rofi ~/.config && echo "Copied rofi configs"
 rm -r ~/.config/dunst && cp -r ./dunst ~/.config && echo "Copied dunst configs"
 
+
+rm -r ~/.config/terminator 
+cp -r ./terminator ~/.config && echo "Copied terminator configs"
+
 cp ./bash/.bashrc ~/.bashrc && echo "Copied bashrc configs"
 cp ./bash/.shell_aliases ~/.shell_aliases && echo "Copied shell_aliases configs"

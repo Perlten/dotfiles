@@ -1,6 +1,0 @@
-pynput
-dbus-next
-cffi
-xcffib
-cairocffi
-PyUserInput
